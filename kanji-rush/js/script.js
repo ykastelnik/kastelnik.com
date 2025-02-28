@@ -313,8 +313,8 @@ const streakThemes = {
 
 // Configuration Airtable
 const AIRTABLE_BASE_ID = 'appPzjIoDIbgVSApx';
-const AIRTABLE_STREAK_TABLE_ID = 'tbl0jOSHWQZVGaQh';
-const AIRTABLE_SCORE_TABLE_ID = 'tbljyZEcsaRY5VY1u';
+const AIRTABLE_STREAK_TABLE_NAME = 'streak'; // Utilisation du nom de la table au lieu de l'ID
+const AIRTABLE_SCORE_TABLE_NAME = 'score';   // Utilisation du nom de la table au lieu de l'ID
 const AIRTABLE_TOKEN = 'patkSqxQl9IP6aECB.4b8096b8c8af259c1f9e46767f6750b71f9ecd2b773e8070b3a613dd8f2ab164';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -408,19 +408,21 @@ function checkLogin() {
 }
 
 // Fonctions Airtable
-async function fetchAirtableData(tableId, fields = ['login', 'score', 'date']) {
+async function fetchAirtableData(tableName, fields = ['login', 'score', 'date']) {
   try {
+      console.log(`Fetching data from table: ${tableName}, fields: ${fields.join(', ')}`);
       const response = await axios.get(
-          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableId}`,
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`,
           {
               headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` },
-              params: { fields }
+              params: { fields, maxRecords: 5, view: 'Grid view' } // Ajout des paramètres pour correspondre à curl
           }
       );
+      console.log('Airtable response:', response.data);
       return response.data.records.map(record => ({
           login: record.fields.login || 'Anonyme',
           score: record.fields.score || 0,
-          date: record.fields.date || new Date().toLocaleString()
+          date: record.fields.date ? new Date(record.fields.date).toLocaleString() : new Date().toLocaleString()
       }));
   } catch (error) {
       console.error('Erreur lors de la récupération des données Airtable:', error);
@@ -429,15 +431,34 @@ async function fetchAirtableData(tableId, fields = ['login', 'score', 'date']) {
   }
 }
 
-async function updateAirtableData(tableId, data) {
+async function updateAirtableData(tableName, data) {
   try {
+      console.log(`Updating table ${tableName} with data:`, data);
+
+      // Validation pour s'assurer que score > 0
+      if (data.score < 1) {
+          console.warn('Score doit être supérieur à 0. Ajustement à 1.');
+          data.score = 1; // Forcer un score positif minimum
+      }
+
+      // Formater la date en ISO 8601 sans millisecondes
+      data.date = new Date(data.date).toISOString().split('T')[0];
+
+      if (data.score < 1) {
+        console.warn('Score doit être supérieur ou égal à 1. Ajustement à 1.');
+        data.score = 1; // Forcer un score minimum de 1
+      }
+      if (!data.login || data.login.trim() === '') {
+          throw new Error('Login ne peut pas être vide.');
+      }
+
       await axios.post(
-          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableId}`,
+          `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`,
           { fields: data },
           { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } }
       );
   } catch (error) {
-      console.error('Erreur lors de la mise à jour des données Airtable:', error);
+      console.error('Erreur lors de la mise à jour des données Airtable:', error.response ? error.response.data : error);
       alert('エラー：データ保存失敗！ (Erreur : Échec de sauvegarde des données !)');
   }
 }
@@ -445,18 +466,18 @@ async function updateAirtableData(tableId, data) {
 async function cleanAirtableRankings() {
   try {
       // Nettoyer la table des streaks
-      const streakRecords = await fetchAirtableData(AIRTABLE_STREAK_TABLE_ID);
+      const streakRecords = await fetchAirtableData(AIRTABLE_STREAK_TABLE_NAME);
       for (const record of streakRecords) {
           await axios.delete(
-              `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_STREAK_TABLE_ID}/${record.id}`,
+              `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_STREAK_TABLE_NAME}/${record.id}`,
               { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } }
           );
       }
       // Nettoyer la table des scores
-      const scoreRecords = await fetchAirtableData(AIRTABLE_SCORE_TABLE_ID);
+      const scoreRecords = await fetchAirtableData(AIRTABLE_SCORE_TABLE_NAME);
       for (const record of scoreRecords) {
           await axios.delete(
-              `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_SCORE_TABLE_ID}/${record.id}`,
+              `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_SCORE_TABLE_NAME}/${record.id}`,
               { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } }
           );
       }
@@ -474,23 +495,27 @@ async function updateHighScores(finalScore, finalStreak) {
       return;
   }
 
-  // Sauvegarder le score dans Airtable
-  await updateAirtableData(AIRTABLE_SCORE_TABLE_ID, {
-      login: playerLogin,
-      score: finalScore,
-      date: new Date().toLocaleString()
-  });
+  // Vérifier que les scores sont positifs
+  if (finalScore < 1 || !finalScore) finalScore = 1;
+  if (finalStreak < 1 || !finalStreak) finalStreak = 1;
 
+  // Sauvegarder le score dans Airtable
+  await updateAirtableData(AIRTABLE_SCORE_TABLE_NAME, {
+    login: playerLogin,
+    score: finalScore,
+    date: new Date().toISOString().split('T')[0]
+  });
+  
   // Sauvegarder le streak dans Airtable
-  await updateAirtableData(AIRTABLE_STREAK_TABLE_ID, {
+  await updateAirtableData(AIRTABLE_STREAK_TABLE_NAME, {
       login: playerLogin,
       score: finalStreak,
-      date: new Date().toLocaleString()
+      date: new Date().toISOString().split('T')[0]
   });
 
   // Mettre à jour les meilleurs scores affichés
-  const scores = await fetchAirtableData(AIRTABLE_SCORE_TABLE_ID);
-  const streaks = await fetchAirtableData(AIRTABLE_STREAK_TABLE_ID);
+  const scores = await fetchAirtableData(AIRTABLE_SCORE_TABLE_NAME);
+  const streaks = await fetchAirtableData(AIRTABLE_STREAK_TABLE_NAME);
 
   const topScore = scores.reduce((max, current) => (current.score > max.score ? current : max), { score: 0 }).score;
   const topStreak = streaks.reduce((max, current) => (current.score > max.score ? current : max), { score: 0 }).score;
@@ -507,8 +532,8 @@ async function updateHighScores(finalScore, finalStreak) {
 }
 
 async function updateLeaderboard() {
-  const scores = await fetchAirtableData(AIRTABLE_SCORE_TABLE_ID);
-  const streaks = await fetchAirtableData(AIRTABLE_STREAK_TABLE_ID);
+  const scores = await fetchAirtableData(AIRTABLE_SCORE_TABLE_NAME);
+  const streaks = await fetchAirtableData(AIRTABLE_STREAK_TABLE_NAME);
 
   // Classement des scores (tri par score descendant)
   const sortedScores = scores.sort((a, b) => b.score - a.score).slice(0, 5);
