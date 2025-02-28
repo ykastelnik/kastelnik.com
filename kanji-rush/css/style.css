@@ -1,0 +1,270 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+    font-family: 'Press Start 2P', cursive;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: url('../images/inu.jpg') no-repeat right center/cover;
+    overflow: hidden;
+    color: #fff;
+    text-shadow: 2px 2px 4px #000;
+}
+
+#game-container {
+    text-align: center;
+    padding: 40px;
+    background: rgba(255, 105, 180, 0.9); /* Rose néon */
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.7); /* Ombre magenta */
+    width: 90%;
+    max-width: 700px;
+    border: 5px solid #00ffff; /* Bordure cyan */
+    position: relative;
+}
+
+#record-overlay {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 36px;
+    color: #ff00ff; /* Magenta néon */
+    text-shadow: 3px 3px 6px #00ffff; /* Ombre cyan */
+    animation: blink 0.5s infinite;
+    z-index: 1000;
+}
+
+#restart-btn, .restart-btn {
+    position: absolute;
+    bottom: -70px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 30px;
+    font-size: 20px;
+    font-family: 'Press Start 2P', cursive;
+    cursor: pointer;
+    background: #ff00ff; /* Magenta néon */
+    color: #00ff00; /* Vert néon */
+    border: 3px solid #00ffff; /* Bordure cyan */
+    border-radius: 10px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#restart-btn:hover, .restart-btn:hover {
+    transform: scale(1.1);
+    background: #00ffff; /* Cyan néon au survol */
+    color: #000;
+}
+
+#in-game-restart-btn {
+    bottom: 80px; /* Déplacé plus bas pour éviter superposition */
+}
+
+#start-screen, #game-screen, #game-over-screen, #edit-pseudo-screen, #settings-screen, #leaderboard-screen {
+    transition: opacity 0.5s;
+}
+
+.hidden {
+    opacity: 0;
+    display: none;
+}
+
+h1, h2, h3 {
+    font-size: 36px;
+    color: #ffff00; /* Jaune vif */
+    text-shadow: 3px 3px 6px #ff00ff; /* Ombre magenta */
+    margin-bottom: 20px;
+}
+
+label {
+    font-size: 20px;
+    margin: 10px 0;
+    display: block;
+    color: #00ff00; /* Vert néon */
+}
+
+input[type="checkbox"], input[type="text"] {
+    transform: scale(1.5);
+    margin-right: 10px;
+}
+
+#pseudo-display, #pseudo-input {
+    margin: 20px 0;
+}
+
+#pseudo-display p {
+    font-size: 18px;
+    color: #00ff00;
+}
+
+#pseudo-input input[type="text"] {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px;
+    padding: 5px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #00ff00;
+    border-radius: 5px;
+}
+
+#pseudo-input button, #save-edit-pseudo-btn, #back-to-start-btn, #clean-ranking-btn, #back-to-start-settings-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-family: 'Press Start 2P', cursive;
+    background: #ff00ff;
+    color: #00ff00;
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 10px;
+}
+
+#pseudo-input button:hover, #save-edit-pseudo-btn:hover, #back-to-start-btn:hover, #clean-ranking-btn:hover, #back-to-start-settings-btn:hover {
+    background: #00ffff;
+    color: #000;
+}
+
+#kana-display {
+    font-size: 120px;
+    margin: 20px 0;
+    color: #00ff00; /* Vert néon pour kana/kanji */
+}
+
+#kana-display.correct-answer {
+    color: #ff0000; /* Rouge néon pour la bonne réponse */
+    animation: blink 0.5s infinite;
+}
+
+#lives {
+    font-size: 40px;
+    margin: 15px 0;
+}
+
+#streak-display, #character-count {
+    font-size: 20px;
+    margin: 10px 0;
+    color: #00ff00; /* Vert néon */
+}
+
+#streak-message {
+    font-size: 18px;
+    color: #00ff00; /* Vert néon */
+    margin: 10px 0;
+    animation: blink 1s infinite;
+}
+
+#timer {
+    font-size: 24px;
+    color: #ff0000; /* Rouge néon */
+    text-shadow: 2px 2px 4px #00ffff; /* Ombre cyan */
+    margin: 10px 0;
+    display: none; /* Caché par défaut, affiché en mode Hardcore */
+    animation: pulse 1s infinite;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin: 30px 0 200px; /* Augmenter la hauteur pour éviter superposition */
+}
+
+#leaderboard-btn, #back-btn {
+    padding: 15px 30px;
+    font-size: 20px;
+    font-family: 'Press Start 2P', cursive;
+    background: #ff00ff;
+    color: #00ff00;
+    border: 3px solid #00ffff;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 10px;
+}
+
+#leaderboard-btn:hover, #back-btn:hover {
+    background: #00ffff;
+    color: #000;
+}
+
+#leaderboard-scores, #high-scores {
+    margin: 20px 0;
+    font-size: 18px;
+    color: #00ff00;
+}
+
+#streak-leaderboard, #score-leaderboard {
+    margin: 10px 0;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+button {
+    padding: 25px;
+    font-size: 24px;
+    font-family: 'Press Start 2P', cursive;
+    cursor: pointer;
+    background: #ff00ff; /* Magenta néon */
+    color: #fff;
+    border: 3px solid #00ff00; /* Bordure verte */
+    border-radius: 10px;
+    transition: transform 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+button:hover {
+    transform: scale(1.1);
+    background: #00ffff; /* Cyan néon au survol */
+    color: #000;
+}
+
+button.correct {
+    background: #00ff00 !important; /* Vert pour bonne réponse */
+    animation: sparkle 0.5s;
+}
+
+button.wrong {
+    background: #ff0000 !important; /* Rouge pour mauvaise réponse */
+    animation: shake 0.3s;
+}
+
+@keyframes sparkle {
+    0% { background: rgba(255, 215, 0, 0); }
+    50% { background: rgba(255, 215, 0, 0.5); }
+    100% { background: rgba(255, 215, 0, 0); }
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+    100% { transform: translateX(0); }
+}
+
+small {
+    font-size: 12px;
+    color: #fff;
+    text-shadow: none;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    #kana-display { font-size: 96px; }
+    button { font-size: 18px; padding: 15px; }
+    #game-container { padding: 20px; width: 85%; max-width: 600px; }
+    #streak-display, #character-count, #streak-message { font-size: 16px; }
+    .button-grid { margin: 20px 0 160px; } /* Ajustement mobile */
+    #pseudo-input input[type="text"], #pseudo-input button, #edit-pseudo, #save-edit-pseudo-btn, #back-to-start-btn, #clean-ranking-btn, #back-to-start-settings-btn { font-size: 14px; padding: 3px; }
+    #leaderboard-btn, #back-btn { font-size: 16px; padding: 10px 20px; }
+}

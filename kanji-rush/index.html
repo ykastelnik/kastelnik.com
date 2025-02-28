@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanji Rush - 日本語 Meme Edition</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Écran de démarrage -->
+        <div id="start-screen">
+            <h1>Kanji Rush</h1>
+            <div id="pseudo-display" class="hidden">
+                <p>やあ、<span id="current-pseudo"></span>！お前はオタクの伝説だね！<br>
+                    <a id="edit-pseudo-link" href="#">変更する</a></p>
+            </div>
+            <div id="pseudo-input" class="hidden">
+                <label for="player-pseudo">Pseudo (ログイン) : </label>
+                <input type="text" id="player-pseudo" placeholder="Entrez votre pseudo">
+                <button id="save-pseudo-btn">保存 (Sauvegarder)</button>
+            </div>
+            <label><input type="checkbox" id="hiragana-check" checked> Hiragana (ひらがな)</label>
+            <label><input type="checkbox" id="katakana-check"> Katakana (カタカナ)</label>
+            <label><input type="checkbox" id="kanji-n5-check"> Kanji N5 (漢字 N5)</label>
+            <label><input type="checkbox" id="kanji-n4-check"> Kanji N4 (漢字 N4)</label>
+            <label><input type="checkbox" id="hardcore-check"> Mode Hardcore 💀</label>
+            <label><input type="checkbox" id="inverted-check"> Mode Inversé</label>
+            <button id="start-btn">START DESU</button>
+            <button id="leaderboard-btn">神のランキング (Classement)</button>
+            <button id="settings-btn">設定 (Settings)</button>
+        </div>
+        <!-- Écran de jeu -->
+        <div id="game-screen" class="hidden">
+            <div>Score: <span id="score">0</span></div>
+            <div>Record: <span id="high-score">0</span> (<span id="record-date">-</span>)</div>
+            <div id="lives"></div>
+            <div id="streak-display">Streak: 0</div>
+            <div id="character-count">0/180 (0%)</div>
+            <div id="timer">TIME LEFT: 5s</div>
+            <div id="kana-display"></div>
+            <div class="button-grid" id="choices"></div>
+            <div id="streak-message" class="hidden"></div>
+            <button id="in-game-restart-btn" class="restart-btn">RESTART</button>
+        </div>
+        <!-- Écran de fin -->
+        <div id="game-over-screen" class="hidden">
+            <h2>GAME OVER DA YO</h2>
+            <div id="high-scores"></div>
+            <button id="play-again">INSERT COIN 💰</button>
+        </div>
+        <!-- Écran de modification du pseudo -->
+        <div id="edit-pseudo-screen" class="hidden">
+            <h2>ログイン変更 (Modifier Pseudo)</h2>
+            <label for="edit-pseudo">Nouveau pseudo : </label>
+            <input type="text" id="edit-pseudo" placeholder="Entrez un nouveau pseudo">
+            <button id="save-edit-pseudo-btn">保存 (Sauvegarder)</button>
+            <button id="back-to-start-btn">戻る (Retour)</button>
+        </div>
+        <!-- Écran des paramètres -->
+        <div id="settings-screen" class="hidden">
+            <h2>設定 (Settings)</h2>
+            <label><input type="checkbox" id="sound-check" checked> Activer le son</label>
+            <button id="clean-ranking-btn">大掃除オタク (Nettoyage Otaku)</button>
+            <button id="back-to-start-settings-btn">戻る (Retour)</button>
+        </div>
+        <!-- Écran de classement -->
+        <div id="leaderboard-screen" class="hidden">
+            <h2>ランキング (Classement)</h2>
+            <div id="leaderboard-scores">
+                <h3>神の連勝ランキング (Classement Streak)</h3>
+                <div id="streak-leaderboard"></div>
+                <h3>最高スコアランキング (Classement Meilleurs Scores)</h3>
+                <div id="score-leaderboard"></div>
+            </div>
+            <button id="back-btn">戻る (Retour)</button>
+        </div>
+        <div id="record-overlay" class="hidden">NEW RECORD! 🎉</div>
+    </div>
+    <button id="restart-btn">RESET OTOTAKU 💀</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="js/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</body>
+</html>
