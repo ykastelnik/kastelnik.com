@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanji Rush - 日本語 Meme Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body {
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            /* Nouveau fond aligné à droite */
+            background: url('https://i.etsystatic.com/27904950/r/il/7963c5/3055276989/il_1080xN.3055276989_mzu3.jpg') no-repeat right center/cover;
+            overflow: hidden;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #game-container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 105, 180, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.7);
+            width: 90%;
+            max-width: 700px;
+            border: 5px solid #00ffff;
+            position: relative;
+        }
+        #record-overlay {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            color: #ff00ff;
+            text-shadow: 3px 3px 6px #00ffff;
+            animation: blink 0.5s infinite;
+            z-index: 1000;
+        }
+        #start-screen, #game-screen, #game-over-screen {
+            transition: opacity 0.5s;
+        }
+        .hidden {
+            opacity: 0;
+            display: none;
+        }
+        h1 {
+            font-size: 36px;
+            color: #ffff00;
+            text-shadow: 3px 3px 6px #ff00ff;
+        }
+        label {
+            font-size: 20px;
+            margin: 10px 0;
+            display: block;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.5);
+            margin-right: 10px;
+        }
+        #kana-display {
+            font-size: 120px;
+            margin: 20px 0;
+            color: #00ff00;
+        }
+        #lives {
+            font-size: 40px;
+            margin: 15px 0;
+        }
+        #timer {
+            font-size: 24px;
+            color: #ff0000;
+            text-shadow: 2px 2px 4px #00ffff;
+            margin: 10px 0;
+            display: none; /* Caché par défaut, affiché en mode Hardcore */
+        }
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        button {
+            padding: 25px;
+            font-size: 24px;
+            font-family: 'Press Start 2P', cursive;
+            cursor: pointer;
+            background: #ff00ff;
+            color: #fff;
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            transition: transform 0.2s, background 0.2s;
+        }
+        button:hover {
+            transform: scale(1.1);
+            background: #00ffff;
+            color: #000;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        #high-scores {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #00ff00;
+        }
+        small {
+            font-size: 12px;
+            color: #fff;
+            text-shadow: none;
+            display: block;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Écran de démarrage -->
+        <div id="start-screen">
+            <h1>Kanji Rush</h1>
+            <label><input type="checkbox" id="hiragana-check" checked> Hiragana (ひらがな)</label>
+            <label><input type="checkbox" id="katakana-check"> Katakana (カタカナ)</label>
+            <label><input type="checkbox" id="kanji-n5-check"> Kanji N5 (漢字 N5)</label>
+            <label><input type="checkbox" id="kanji-n4-check"> Kanji N4 (漢字 N4)</label>
+            <label><input type="checkbox" id="hardcore-check"> Mode Hardcore 💀</label>
+            <button id="start-btn">START DESU</button>
+        </div>
+        <!-- Écran de jeu -->
+        <div id="game-screen" class="hidden">
+            <div>スコア: <span id="score">0</span></div>
+            <div>レコード: <span id="high-score">0</span> (<span id="record-date">-</span>)</div>
+            <div id="lives"></div>
+            <div id="timer">TIME LEFT: 5s</div>
+            <div id="kana-display"></div>
+            <div class="button-grid" id="choices"></div>
+        </div>
+        <!-- Écran de fin -->
+        <div id="game-over-screen" class="hidden">
+            <h2>GAME OVER DA YO</h2>
+            <div id="high-scores"></div>
+            <button id="play-again">INSERT COIN 💰</button>
+        </div>
+        <div id="record-overlay" class="hidden">NEW RECORD! 🎉</div>
+    </div>
+
+    <script>
+        // Données des kana et kanji
+        const hiraganaList = ['あ', 'い', 'う', 'え', 'お','か', 'き', 'く', 'け', 'こ','が', 'ぎ', 'ぐ', 'げ', 'ご','ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'];
+        const katakanaList = ['ア', 'イ', 'ウ', 'エ', 'オ','カ', 'キ', 'ク', 'ケ', 'コ','ガ', 'ギ', 'グ', 'ゲ', 'ゴ','パ', 'ピ', 'プ', 'ペ', 'ポ'];
+        const kanjiN5List = ['一', '七', '万', '三', '上', '下', '中', '九', '二', '五', '人', '今', '休', '何', '先', '入', '八', '六', '円', '出', '分', '前', '北', '十', '千', '午', '半', '南', '友', '右', '名', '四', '国', '土', '外', '大', '天', '女', '子', '学', '小', '山', '川', '左', '年', '後', '日', '時', '書', '月', '木', '本', '来', '東', '校', '母', '毎', '気', '水', '火', '父', '生', '男', '白', '百', '聞', '行', '西', '見', '話', '語', '読', '車', '金', '長', '間', '雨', '電', '食', '高'];
+        const kanjiN4List = ['不', '世', '主', '事', '京', '代', '以', '会', '住', '体', '作', '使', '元', '公', '切', '別', '力', '動', '口', '台', '同', '品', '員', '問', '地', '場', '売', '多', '始', '安', '家', '少', '工', '広', '店', '度', '建', '強', '心', '思', '急', '意', '手', '持', '教', '文', '料', '新', '方', '明', '有', '朝', '業', '楽', '止', '正', '死', '海', '無', '物', '特', '理', '用', '田', '町', '画', '界', '病', '発', '目', '真', '着', '知', '研', '社', '私', '究', '空', '立', '終', '考', '者', '自', '言', '計', '質', '起', '足', '転', '近', '送', '通', '運', '道', '重', '野', '開', '院', '集', '題'];
+
+        const kanaToRomaji = {            
+            // Hiragana de base
+            'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
+            'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
+            // Dakuten
+            'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
+            // Handakuten
+            'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
+            // Katakana de base
+            'ア': 'a', 'イ': 'i', 'ウ': 'u', 'エ': 'e', 'オ': 'o',
+            'カ': 'ka', 'キ': 'ki', 'ク': 'ku', 'ケ': 'ke', 'コ': 'ko',
+            // Dakuten Katakana
+            'ガ': 'ga', 'ギ': 'gi', 'グ': 'gu', 'ゲ': 'ge', 'ゴ': 'go',
+            // Handakuten Katakana
+            'パ': 'pa', 'ピ': 'pi', 'プ': 'pu', 'ペ': 'pe', 'ポ': 'po',
+            // Kanji N5 avec traduction et emoji
+            '一': 'ichi 🔢 (un)', '七': 'nana 🔢 (sept)', '万': 'man 🔢 (dix mille)', 
+            '三': 'san 🔢 (trois)', '上': 'ue ⬆️ (haut)', '下': 'shita ⬇️ (bas)', 
+            '中': 'naka ⚖️ (milieu)', '九': 'kyuu 🔢 (neuf)', '二': 'ni 🔢 (deux)', 
+            '五': 'go 🔢 (cinq)', '人': 'hito 👤 (personne)', '今': 'ima ⏳ (maintenant)', 
+            '休': 'yasumi 😴 (repos)', '何': 'nani ❓ (quoi)', '先': 'saki ⬆️ (devant)', 
+            '入': 'iri 🚪 (entrer)', '八': 'hachi 🔢 (huit)', '六': 'roku 🔢 (six)', 
+            '円': 'en 💴 (yen)', '出': 'de 🚪 (sortir)', '分': 'fun ⏱️ (minute)', 
+            '前': 'mae ⬅️ (avant)', '北': 'kita 🌏 (nord)', '十': 'juu 🔢 (dix)', 
+            '千': 'sen 🔢 (mille)', '午': 'go ⏰ (midi)', '半': 'han ➗ (moitié)', 
+            '南': 'minami 🌏 (sud)', '友': 'tomo 🤝 (ami)', '右': 'migi ➡️ (droite)', 
+            '名': 'na 📛 (nom)', '四': 'shi 🔢 (quatre)', '国': 'kuni 🗺️ (pays)', 
+            '土': 'tsuchi 🌍 (terre)', '外': 'soto 🚪 (extérieur)', '大': 'dai 📏 (grand)', 
+            '天': 'ten ☁️ (ciel)', '女': 'onna 👩 (femme)', '子': 'ko 👶 (enfant)', 
+            '学': 'gaku 📚 (études)', '小': 'shou 📐 (petit)', '山': 'yama 🏞️ (montagne)', 
+            '川': 'kawa 🌊 (rivière)', '左': 'hidari ⬅️ (gauche)', '年': 'nen 📅 (année)', 
+            '後': 'ato ➡️ (après)', '日': 'hi ☀️ (jour)', '時': 'ji ⏰ (heure)', 
+            '書': 'sho ✍️ (écrire)', '月': 'getsu 🌙 (mois)', '木': 'ki 🌳 (arbre)', 
+            '本': 'hon 📖 (livre)', '来': 'rai 🚶‍➡️ (venir)', '東': 'higashi 🌏 (est)', 
+            '校': 'kou 🏫 (école)', '母': 'haha 👩‍🦳 (mère)', '毎': 'mai 🔄 (chaque)', 
+            '気': 'ki 💨 (air)', '水': 'mizu 💧 (eau)', '火': 'hi 🔥 (feu)', 
+            '父': 'tou 👨‍🦳 (père)', '生': 'sei 🌱 (vie)', '男': 'otoko 👨 (homme)', 
+            '白': 'shiro ⚪ (blanc)', '百': 'hyaku 🔢 (cent)', '聞': 'kiku 👂 (écouter)', 
+            '行': 'iku 🚶 (aller)', '西': 'nishi 🌏 (ouest)', '見': 'mi 👀 (voir)', 
+            '話': 'hanashi 💬 (parler)', '語': 'go 🗣️ (langue)', '読': 'yomu 📖 (lire)', 
+            '車': 'kuruma 🚗 (voiture)', '金': 'kin 💰 (or)', '長': 'naga 📏 (long)', 
+            '間': 'aida ⏳ (intervalle)', '雨': 'ame 🌧️ (pluie)', '電': 'den ⚡ (électricité)', 
+            '食': 'ta 🍽️ (manger)', '高': 'taka ⛰️ (haut)',
+            // Kanji N4 avec traduction et emoji
+            '不': 'fu ❌ (non)', '世': 'yo 🌍 (monde)', '主': 'nu 🏠 (maître)', 
+            '事': 'koto 💼 (affaire)', '京': 'kyou 🏯 (capitale)', '代': 'dai ⏳ (génération)', 
+            '以': 'i ⬅️ (depuis)', '会': 'kai 🤝 (rencontre)', '住': 'ju 🏡 (vivre)', 
+            '体': 'tai 💪 (corps)', '作': 'saku ✍️ (faire)', '使': 'shi 🛠️ (utiliser)', 
+            '元': 'gen 💰 (origine)', '公': 'kou 🏛️ (public)', '切': 'kiri ✂️ (couper)', 
+            '別': 'betsu 🔀 (séparer)', '力': 'riki 💪 (force)', '動': 'dou 🚶 (bouger)', 
+            '口': 'kuchi 👄 (bouche)', '台': 'dai 📺 (plateforme)', '同': 'dou 👥 (même)', 
+            '品': 'hin 📦 (article)', '員': 'in 👥 (membre)', '問': 'mon ❓ (question)', 
+            '地': 'chi 🌍 (terre)', '場': 'ba 🏟️ (lieu)', '売': 'bai 🛒 (vendre)', 
+            '多': 'ta 🔢 (plusieurs)', '始': 'shi 🏁 (commencer)', '安': 'an 💸 (bon marché)', 
+            '家': 'ie 🏠 (maison)', '少': 'shou 📐 (peu)', '工': 'kou 🛠️ (travail)', 
+            '広': 'hiro 🏞️ (large)', '店': 'ten 🏬 (magasin)', '度': 'do 📏 (degré)', 
+            '建': 'tate 🏗️ (construire)', '強': 'tsuyo 💪 (fort)', '心': 'kokoro 💖 (cœur)', 
+            '思': 'omo 💭 (penser)', '急': 'kyuu ⏩ (rapide)', '意': 'i 💡 (intention)', 
+            '手': 'te ✋ (main)', '持': 'mo 🛠️ (tenir)', '教': 'kyou 📚 (enseigner)', 
+            '文': 'bun 📜 (culture)', '料': 'ryou 🍲 (frais)', '新': 'shin 🌟 (nouveau)', 
+            '方': 'hou ➡️ (direction)', '明': 'mei ☀️ (clair)', '有': 'yu ✅ (avoir)', 
+            '朝': 'asa 🌞 (matin)', '業': 'gyou 💼 (travail)', '楽': 'raku 🎵 (plaisir)', 
+            '止': 'tome ⛔ (arrêter)', '正': 'sei ✅ (correct)', '死': 'shi 💀 (mort)', 
+            '海': 'umi 🌊 (mer)', '無': 'mu ❌ (rien)', '物': 'mono 🎁 (chose)', 
+            '特': 'toku ⭐ (spécial)', '理': 'ri ⚖️ (raison)', '用': 'you 🛠️ (usage)', 
+            '田': 'ta 🌾 (champ)', '町': 'machi 🏙️ (ville)', '画': 'ga 🎨 (peinture)', 
+            '界': 'kai 🌍 (monde)', '病': 'byou 🤒 (maladie)', '発': 'hatsu 🚀 (lancer)', 
+            '目': 'me 👀 (œil)', '真': 'shin ✅ (vrai)', '着': 'cha 👕 (porter)', 
+            '知': 'chi 🧠 (savoir)', '研': 'ken 🔍 (recherche)', '社': 'sha 🏢 (société)', 
+            '私': 'watashi 👤 (moi)', '究': 'kyuu 🔍 (recherche)', '空': 'sora ☁️ (ciel)', 
+            '立': 'tatsu 🏞️ (debout)', '終': 'owari 🏁 (fin)', '考': 'kangae 💭 (penser)', 
+            '者': 'sha 👤 (personne)', '自': 'ji 🚗 (soi)', '言': 'gen 💬 (parole)', 
+            '計': 'kei 📏 (mesure)', '質': 'shitsu ⚖️ (qualité)', '起': 'oki 🌅 (se lever)', 
+            '足': 'ashi 👣 (pied)', '転': 'ten 🔄 (tourner)', '近': 'chika 📍 (proche)', 
+            '送': 'sou 📦 (envoyer)', '通': 'tsu 📞 (passer)', '運': 'un 🚚 (transporter)', 
+            '道': 'michi 🛤️ (chemin)', '重': 'juu ⚖️ (lourd)', '野': 'no 🌾 (champ)', 
+            '開': 'kai 🏁 (ouvrir)', '院': 'in 🏥 (institut)', '集': 'shu 👥 (rassembler)', 
+            '題': 'dai ❓ (sujet)'
+        };
+
+        // Variables globales
+        let selectedKana = [], selectedRomaji = [], currentKana, score = 0, mistakes = 0;
+        let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+        let hardcoreMode = false;
+        let timerInterval;
+
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const hiraganaCheck = document.getElementById('hiragana-check');
+        const katakanaCheck = document.getElementById('katakana-check');
+        const kanjiN5Check = document.getElementById('kanji-n5-check');
+        const kanjiN4Check = document.getElementById('kanji-n4-check');
+        const hardcoreCheck = document.getElementById('hardcore-check');
+        const startBtn = document.getElementById('start-btn');
+        const kanaDisplay = document.getElementById('kana-display');
+        const choicesDiv = document.getElementById('choices');
+        const scoreSpan = document.getElementById('score');
+        const highScoreSpan = document.getElementById('high-score');
+        const recordDateSpan = document.getElementById('record-date');
+        const livesDiv = document.getElementById('lives');
+        const recordOverlay = document.getElementById('record-overlay');
+        const highScoresDiv = document.getElementById('high-scores');
+        const playAgainBtn = document.getElementById('play-again');
+        const timerDiv = document.getElementById('timer');
+
+        const maxLives = 3;
+        const liveEmoji = '❤️';
+        const lostEmoji = '💔';
+
+        // Sons
+        const correctSound = new Audio('https://www.myinstants.com/media/sounds/wow-anime-voice-accent.mp3');
+        const wrongSound = new Audio('https://media.memesoundeffects.com/2022/11/Steve-Harvey-Nani.mp3');
+        const gameOverSound = new Audio('https://www.myinstants.com/media/sounds/12322.mp3');
+        const startScreenMusic = new Audio('https://www.myinstants.com/media/sounds/japanese-tv-meme-compilation.mp3');
+        startScreenMusic.loop = true;
+
+        // Initialisation des scores
+        const topScore = highScores.length > 0 ? Math.max(...highScores.map(s => s.score)) : 0;
+        highScoreSpan.textContent = topScore;
+        recordDateSpan.textContent = highScores.length > 0 ? highScores.find(s => s.score === topScore).date : '-';
+        updateLives();
+
+        // Fonctions utilitaires
+        function getRandomKana() {
+            return selectedKana[Math.floor(Math.random() * selectedKana.length)];
+        }
+
+        function getRandomRomaji(exclude) {
+            let romaji;
+            do {
+                romaji = selectedRomaji[Math.floor(Math.random() * selectedRomaji.length)];
+            } while (romaji === exclude);
+            return romaji;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function updateLives() {
+            livesDiv.textContent = liveEmoji.repeat(maxLives - mistakes) + lostEmoji.repeat(mistakes);
+        }
+
+        function launchConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        function updateHighScores() {
+            highScores.push({ score, date: new Date().toLocaleString() });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, 5);
+            localStorage.setItem('highScores', JSON.stringify(highScores));
+            const topScore = highScores[0].score;
+            highScoreSpan.textContent = topScore;
+            recordDateSpan.textContent = highScores[0].date;
+            return score > topScore;
+        }
+
+        function startTimer() {
+            let timeLeft = 5;
+            timerDiv.style.display = 'block';
+            timerDiv.textContent = `TIME LEFT: ${timeLeft}s`;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDiv.textContent = `TIME LEFT: ${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    wrongSound.play();
+                    mistakes++;
+                    updateLives();
+                    if (mistakes >= maxLives) {
+                        gameOver();
+                    } else {
+                        nextKana();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Fonctions de jeu
+        function initializeChoices() {
+            selectedKana = [];
+            selectedRomaji = [];
+            if (hiraganaCheck.checked) {
+                selectedKana.push(...hiraganaList);
+                selectedRomaji.push(...hiraganaList.map(k => kanaToRomaji[k]));
+            }
+            if (katakanaCheck.checked) {
+                selectedKana.push(...katakanaList);
+                selectedRomaji.push(...katakanaList.map(k => kanaToRomaji[k]));
+            }
+            if (kanjiN5Check.checked) {
+                selectedKana.push(...kanjiN5List);
+                selectedRomaji.push(...kanjiN5List.map(k => kanaToRomaji[k].split(' ')[0]));
+            }
+            if (kanjiN4Check.checked) {
+                selectedKana.push(...kanjiN4List);
+                selectedRomaji.push(...kanjiN4List.map(k => kanaToRomaji[k].split(' ')[0]));
+            }
+            hardcoreMode = hardcoreCheck.checked;
+        }
+
+        function nextKana() {
+            if (hardcoreMode) {
+                clearInterval(timerInterval);
+                startTimer();
+            } else {
+                timerDiv.style.display = 'none';
+            }
+            currentKana = getRandomKana();
+            kanaDisplay.textContent = currentKana;
+            const correctAnswer = kanaToRomaji[currentKana].split(' ')[0];
+            
+            let choices = [correctAnswer];
+            while (choices.length < 4) {
+                let randomChoice = getRandomRomaji(correctAnswer);
+                if (!choices.includes(randomChoice)) choices.push(randomChoice);
+            }
+            choices = shuffle(choices);
+            
+            choicesDiv.innerHTML = '';
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                const isKanji = kanjiN5List.includes(currentKana) || kanjiN4List.includes(currentKana);
+                if (isKanji) {
+                    const kanjiForChoice = Object.entries(kanaToRomaji).find(([k, v]) => v.startsWith(choice));
+                    if (kanjiForChoice) {
+                        const parts = kanaToRomaji[kanjiForChoice[0]].split(' ');
+                        const emoji = parts[1];
+                        const translation = parts[2] ? `${parts[2].replace('<small>', '').replace('</small>', '')}` : '';
+                        btn.innerHTML = `${choice} ${emoji}<br>${translation}`;
+                    } else {
+                        btn.textContent = choice;
+                    }
+                } else {
+                    btn.textContent = choice;
+                }
+                btn.onclick = () => checkAnswer(choice);
+                choicesDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected) {
+            if (hardcoreMode) clearInterval(timerInterval);
+            const correct = selected === kanaToRomaji[currentKana].split(' ')[0];
+            
+            if (correct) {
+                correctSound.play();
+                launchConfetti();
+                score++;
+                scoreSpan.textContent = score;
+                if (updateHighScores()) {
+                    recordOverlay.classList.remove('hidden');
+                    setTimeout(() => recordOverlay.classList.add('hidden'), 3000);
+                }
+            } else {
+                wrongSound.play();
+                mistakes++;
+                updateLives();
+                if (mistakes >= maxLives) {
+                    gameOver();
+                    return;
+                }
+            }
+            setTimeout(nextKana, 500);
+        }
+
+        function gameOver() {
+            gameOverSound.play();
+            gameScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            highScoresDiv.innerHTML = highScores.map((s, i) => 
+                `<p>${i + 1}. ${s.score} (${s.date})</p>`
+            ).join('');
+        }
+
+        // Écouteurs d'événements
+        startBtn.onclick = () => {
+            if (!hiraganaCheck.checked && !katakanaCheck.checked && !kanjiN5Check.checked && !kanjiN4Check.checked) {
+                alert('少なくとも1つ選んでね！');
+                return;
+            }
+            startScreenMusic.pause();
+            initializeChoices();
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            nextKana();
+        };
+
+        playAgainBtn.onclick = () => {
+            score = 0;
+            mistakes = 0;
+            scoreSpan.textContent = '0';
+            updateLives();
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            startScreenMusic.play();
+        };
+
+        // Jouer la musique de l'écran de démarrage au chargement
+        window.onload = () => startScreenMusic.play();
+    </script>
+</body>
+</html>
