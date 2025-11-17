@@ -59,6 +59,11 @@ const currentZoom = ref(15)
 // Three.js core objects
 let scene, camera, renderer, controls, animationId
 
+// Animation objects
+let snowflakes = []
+let train = null
+let trainPosition = -ROOM_SIZE / 2 // Start position off-screen
+
 // Room dimensions
 const ROOM_SIZE = 10
 
@@ -171,6 +176,9 @@ function initScene() {
 
   // === CHRISTMAS GARDEN ===
   createChristmasGarden()
+
+  // === THOMAS TRAIN ===
+  createThomasTrain()
 }
 
 /**
@@ -514,18 +522,23 @@ function createChristmasGarden() {
     createChristmasTree(pos.x, pos.z, 1.5 + Math.random() * 0.5)
   })
 
-  // Add some snow falling particles (simple white spheres)
-  for (let i = 0; i < 30; i++) {
+  // Add some snow falling particles (simple white spheres) - store for animation
+  for (let i = 0; i < 50; i++) {
     const snowflakeGeometry = new THREE.SphereGeometry(0.05, 6, 6)
     const snowflakeMaterial = new THREE.MeshLambertMaterial({
       color: 0xFFFFFF
     })
     const snowflake = new THREE.Mesh(snowflakeGeometry, snowflakeMaterial)
     snowflake.position.set(
-      -ROOM_SIZE / 2 - 3 - Math.random() * 6,
-      Math.random() * 8 + 2,
-      -3 + Math.random() * 6
+      -ROOM_SIZE / 2 - 3 - Math.random() * 8,
+      Math.random() * 10 + 2,
+      -4 + Math.random() * 8
     )
+    // Store fall speed for each snowflake
+    snowflake.userData.fallSpeed = 0.01 + Math.random() * 0.02
+    snowflake.userData.sway = Math.random() * 0.01
+    snowflake.userData.swayOffset = Math.random() * Math.PI * 2
+    snowflakes.push(snowflake)
     scene.add(snowflake)
   }
 }
@@ -623,10 +636,203 @@ function createChristmasTree(x, z, scale = 1.5) {
 }
 
 /**
+ * Create Thomas the Train on the railway tracks
+ */
+function createThomasTrain() {
+  // Create a group to hold all train parts
+  train = new THREE.Group()
+
+  // --- TRAIN BODY (Main boiler) ---
+  const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16)
+  const bodyMaterial = new THREE.MeshLambertMaterial({
+    color: 0x0066B3 // Thomas blue
+  })
+  const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+  body.rotation.z = Math.PI / 2 // Horizontal orientation
+  body.position.set(0, 0.5, 0)
+  body.castShadow = true
+  train.add(body)
+
+  // --- TRAIN CAB (Driver's cabin) ---
+  const cabGeometry = new THREE.BoxGeometry(0.5, 0.6, 0.6)
+  const cabMaterial = new THREE.MeshLambertMaterial({
+    color: 0x0066B3 // Thomas blue
+  })
+  const cab = new THREE.Mesh(cabGeometry, cabMaterial)
+  cab.position.set(-0.5, 0.5, 0)
+  cab.castShadow = true
+  train.add(cab)
+
+  // --- CAB ROOF ---
+  const roofGeometry = new THREE.BoxGeometry(0.5, 0.1, 0.7)
+  const roofMaterial = new THREE.MeshLambertMaterial({
+    color: 0x0066B3
+  })
+  const roof = new THREE.Mesh(roofGeometry, roofMaterial)
+  roof.position.set(-0.5, 0.85, 0)
+  train.add(roof)
+
+  // --- FACE (Thomas's face) ---
+  const faceGeometry = new THREE.CircleGeometry(0.25, 16)
+  const faceMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFE4C4 // Beige/face color
+  })
+  const face = new THREE.Mesh(faceGeometry, faceMaterial)
+  face.position.set(0.61, 0.5, 0)
+  face.rotation.y = Math.PI / 2
+  train.add(face)
+
+  // --- EYES (2 eyes) ---
+  const eyeGeometry = new THREE.CircleGeometry(0.06, 16)
+  const eyeMaterial = new THREE.MeshLambertMaterial({
+    color: 0x000000 // Black
+  })
+  const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial)
+  leftEye.position.set(0.62, 0.55, -0.08)
+  leftEye.rotation.y = Math.PI / 2
+  train.add(leftEye)
+
+  const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial)
+  rightEye.position.set(0.62, 0.55, 0.08)
+  rightEye.rotation.y = Math.PI / 2
+  train.add(rightEye)
+
+  // --- SMILE ---
+  const smileGeometry = new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI)
+  const smileMaterial = new THREE.MeshLambertMaterial({
+    color: 0x000000
+  })
+  const smile = new THREE.Mesh(smileGeometry, smileMaterial)
+  smile.position.set(0.62, 0.42, 0)
+  smile.rotation.set(0, Math.PI / 2, 0)
+  train.add(smile)
+
+  // --- FUNNEL (Chimney) ---
+  const funnelGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.3, 16)
+  const funnelMaterial = new THREE.MeshLambertMaterial({
+    color: 0x000000 // Black funnel
+  })
+  const funnel = new THREE.Mesh(funnelGeometry, funnelMaterial)
+  funnel.position.set(0.3, 0.95, 0)
+  train.add(funnel)
+
+  // --- FUNNEL TOP (Red rim) ---
+  const funnelTopGeometry = new THREE.CylinderGeometry(0.11, 0.08, 0.05, 16)
+  const funnelTopMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFF0000 // Red
+  })
+  const funnelTop = new THREE.Mesh(funnelTopGeometry, funnelTopMaterial)
+  funnelTop.position.set(0.3, 1.12, 0)
+  train.add(funnelTop)
+
+  // --- WHEELS (6 wheels - 3 on each side) ---
+  const wheelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16)
+  const wheelMaterial = new THREE.MeshLambertMaterial({
+    color: 0x333333 // Dark gray
+  })
+
+  const wheelPositions = [
+    { x: 0.5, z: -0.4 },
+    { x: 0, z: -0.4 },
+    { x: -0.5, z: -0.4 },
+    { x: 0.5, z: 0.4 },
+    { x: 0, z: 0.4 },
+    { x: -0.5, z: 0.4 }
+  ]
+
+  wheelPositions.forEach(pos => {
+    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial)
+    wheel.rotation.x = Math.PI / 2
+    wheel.position.set(pos.x, 0.15, pos.z)
+    wheel.castShadow = true
+    train.add(wheel)
+
+    // Add wheel details (center hub)
+    const hubGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.12, 16)
+    const hubMaterial = new THREE.MeshLambertMaterial({
+      color: 0xFF0000 // Red hub
+    })
+    const hub = new THREE.Mesh(hubGeometry, hubMaterial)
+    hub.rotation.x = Math.PI / 2
+    hub.position.set(pos.x, 0.15, pos.z)
+    train.add(hub)
+  })
+
+  // --- BUFFERS (Front and back) ---
+  const bufferGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.1, 16)
+  const bufferMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFF0000 // Red
+  })
+
+  const frontBuffer1 = new THREE.Mesh(bufferGeometry, bufferMaterial)
+  frontBuffer1.rotation.z = Math.PI / 2
+  frontBuffer1.position.set(0.75, 0.3, -0.15)
+  train.add(frontBuffer1)
+
+  const frontBuffer2 = new THREE.Mesh(bufferGeometry, bufferMaterial)
+  frontBuffer2.rotation.z = Math.PI / 2
+  frontBuffer2.position.set(0.75, 0.3, 0.15)
+  train.add(frontBuffer2)
+
+  // Position train at starting point on the tracks
+  train.position.set(0, 0, trainPosition)
+  train.scale.set(0.8, 0.8, 0.8) // Scale down a bit to fit on tracks
+  scene.add(train)
+}
+
+/**
+ * Animate snowflakes falling and train movement
+ */
+function animateSnowAndTrain() {
+  // Animate snowflakes
+  snowflakes.forEach((snowflake, index) => {
+    // Fall down
+    snowflake.position.y -= snowflake.userData.fallSpeed
+
+    // Sway left and right
+    snowflake.position.x += Math.sin(Date.now() * 0.001 + snowflake.userData.swayOffset) * snowflake.userData.sway
+
+    // Reset to top when reaching ground
+    if (snowflake.position.y < 0) {
+      snowflake.position.y = 10 + Math.random() * 2
+      snowflake.position.x = -ROOM_SIZE / 2 - 3 - Math.random() * 8
+      snowflake.position.z = -4 + Math.random() * 8
+    }
+  })
+
+  // Animate train
+  if (train) {
+    // Move train along Z axis (along the tracks)
+    trainPosition += 0.02
+
+    // Reset train position when it goes off screen
+    if (trainPosition > ROOM_SIZE / 2 + 3) {
+      trainPosition = -ROOM_SIZE / 2 - 3
+    }
+
+    train.position.z = trainPosition
+
+    // Slight bobbing motion
+    train.position.y = 0.02 * Math.sin(Date.now() * 0.005)
+
+    // Rotate wheels
+    train.children.forEach(child => {
+      if (child.geometry && child.geometry.type === 'CylinderGeometry' &&
+          child.material.color.getHex() === 0x333333) {
+        child.rotation.x += 0.1
+      }
+    })
+  }
+}
+
+/**
  * Animation loop - renders the scene continuously
  */
 function animate() {
   animationId = requestAnimationFrame(animate)
+
+  // Animate snow and train
+  animateSnowAndTrain()
 
   // Update camera movement from keyboard
   updateCameraMovement()
