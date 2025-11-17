@@ -1,5 +1,46 @@
 <template>
-  <div ref="containerRef" class="threejs-container"></div>
+  <div ref="containerRef" class="threejs-container">
+    <!-- Help Overlay -->
+    <div class="help-overlay" v-if="showHelp">
+      <div class="help-content">
+        <h2>🚂 Thomas Train Dashboard Controls 🎄</h2>
+        <div class="help-section">
+          <h3>Camera Controls:</h3>
+          <p><strong>Mouse Left + Drag:</strong> Rotate camera 360°</p>
+          <p><strong>Mouse Right + Drag:</strong> Pan view</p>
+          <p><strong>Mouse Wheel:</strong> Zoom in/out</p>
+        </div>
+        <div class="help-section">
+          <h3>Keyboard Controls:</h3>
+          <p><strong>Arrow Keys / WASD:</strong> Move camera</p>
+          <p><strong>Q / E:</strong> Rotate left/right</p>
+          <p><strong>R:</strong> Reset camera position</p>
+          <p><strong>H:</strong> Toggle this help</p>
+        </div>
+        <button @click="showHelp = false" class="close-btn">Close (H)</button>
+      </div>
+    </div>
+
+    <!-- Train Dashboard -->
+    <div class="train-dashboard">
+      <div class="dashboard-title">🚂 Thomas Control Panel 🎄</div>
+      <div class="dashboard-controls">
+        <div class="control-group">
+          <label>Speed:</label>
+          <input type="range" v-model="moveSpeed" min="0.1" max="2" step="0.1" />
+          <span>{{ moveSpeed }}</span>
+        </div>
+        <div class="control-group">
+          <label>Zoom Level:</label>
+          <span>{{ currentZoom.toFixed(1) }}</span>
+        </div>
+        <div class="control-buttons">
+          <button @click="resetCamera" class="btn-reset">🔄 Reset View</button>
+          <button @click="showHelp = !showHelp" class="btn-help">❓ Help</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -10,21 +51,40 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 // Template ref for the container element
 const containerRef = ref(null)
 
+// UI reactive variables
+const showHelp = ref(true) // Show help on start
+const moveSpeed = ref(0.5)
+const currentZoom = ref(15)
+
 // Three.js core objects
 let scene, camera, renderer, controls, animationId
 
 // Room dimensions
 const ROOM_SIZE = 10
 
+// Keyboard controls
+const keys = {
+  w: false, a: false, s: false, d: false,
+  arrowup: false, arrowdown: false, arrowleft: false, arrowright: false,
+  q: false, e: false
+}
+
+// Initial camera position
+const initialCameraPosition = { x: 10, y: 10, z: 10 }
+
 onMounted(() => {
   initScene()
   animate()
   window.addEventListener('resize', handleResize)
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
 })
 
 onUnmounted(() => {
   // Clean up resources
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
   if (animationId) {
     cancelAnimationFrame(animationId)
   }
@@ -73,14 +133,18 @@ function initScene() {
   containerRef.value.appendChild(renderer.domElement)
 
   // === ORBIT CONTROLS ===
-  // Enable interactive camera movement (rotate, pan, zoom)
+  // Enable interactive camera movement (rotate, pan, zoom) - Full 360° freedom
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true // Smooth camera movements
   controls.dampingFactor = 0.05
-  controls.screenSpacePanning = false
-  controls.minDistance = 5 // Minimum zoom distance
-  controls.maxDistance = 50 // Maximum zoom distance
-  controls.maxPolarAngle = Math.PI / 2 // Prevent camera going below ground
+  controls.screenSpacePanning = true // Allow free panning
+  controls.minDistance = 2 // Minimum zoom distance (closer)
+  controls.maxDistance = 80 // Maximum zoom distance (farther)
+  // No polar angle restriction - full 360° rotation!
+  controls.enablePan = true
+  controls.panSpeed = 1.0
+  controls.rotateSpeed = 1.0
+  controls.zoomSpeed = 1.2
 
   // === LIGHTING ===
   // Ambient light for overall illumination
@@ -104,6 +168,9 @@ function initScene() {
 
   // === ROOM CONSTRUCTION ===
   createRoom()
+
+  // === CHRISTMAS GARDEN ===
+  createChristmasGarden()
 }
 
 /**
@@ -208,7 +275,7 @@ function createRoom() {
   // Create the window hole (inner rectangle)
   const windowWidth = 3
   const windowHeight = 4
-  const windowX = 1 // Offset from center
+  const windowX = 0 // Centered on wall
   const windowY = 3 // Height from floor
 
   const windowHole = new THREE.Path()
@@ -416,10 +483,153 @@ function createCoffeeTableWithFlower() {
 }
 
 /**
+ * Create a Christmas garden with snowy trees visible through the window
+ */
+function createChristmasGarden() {
+  // Position trees outside the wall with window (x = -ROOM_SIZE/2)
+  // Trees should be visible through window which is centered at z=0
+
+  // Ground snow patch outside
+  const snowGroundGeometry = new THREE.PlaneGeometry(15, 15)
+  const snowGroundMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFFFFF, // Pure white snow
+    side: THREE.DoubleSide
+  })
+  const snowGround = new THREE.Mesh(snowGroundGeometry, snowGroundMaterial)
+  snowGround.rotation.x = -Math.PI / 2
+  snowGround.position.set(-ROOM_SIZE / 2 - 7.5, 0, 0)
+  snowGround.receiveShadow = true
+  scene.add(snowGround)
+
+  // Create multiple Christmas trees
+  const treePositions = [
+    { x: -ROOM_SIZE / 2 - 3, z: -2 },
+    { x: -ROOM_SIZE / 2 - 5, z: 1 },
+    { x: -ROOM_SIZE / 2 - 4, z: 3 },
+    { x: -ROOM_SIZE / 2 - 6, z: -1 },
+    { x: -ROOM_SIZE / 2 - 7, z: 2 }
+  ]
+
+  treePositions.forEach((pos, index) => {
+    createChristmasTree(pos.x, pos.z, 1.5 + Math.random() * 0.5)
+  })
+
+  // Add some snow falling particles (simple white spheres)
+  for (let i = 0; i < 30; i++) {
+    const snowflakeGeometry = new THREE.SphereGeometry(0.05, 6, 6)
+    const snowflakeMaterial = new THREE.MeshLambertMaterial({
+      color: 0xFFFFFF
+    })
+    const snowflake = new THREE.Mesh(snowflakeGeometry, snowflakeMaterial)
+    snowflake.position.set(
+      -ROOM_SIZE / 2 - 3 - Math.random() * 6,
+      Math.random() * 8 + 2,
+      -3 + Math.random() * 6
+    )
+    scene.add(snowflake)
+  }
+}
+
+/**
+ * Create a single Christmas tree at specified position
+ */
+function createChristmasTree(x, z, scale = 1.5) {
+  // Tree trunk
+  const trunkGeometry = new THREE.CylinderGeometry(0.1 * scale, 0.12 * scale, 0.4 * scale, 8)
+  const trunkMaterial = new THREE.MeshLambertMaterial({
+    color: 0x4A3728 // Dark brown
+  })
+  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial)
+  trunk.position.set(x, 0.2 * scale, z)
+  trunk.castShadow = true
+  scene.add(trunk)
+
+  // Tree foliage (3 cones stacked)
+  const foliageMaterial = new THREE.MeshLambertMaterial({
+    color: 0x0D5F0D // Dark green
+  })
+
+  // Bottom cone
+  const cone1Geometry = new THREE.ConeGeometry(0.6 * scale, 1.0 * scale, 8)
+  const cone1 = new THREE.Mesh(cone1Geometry, foliageMaterial)
+  cone1.position.set(x, 0.8 * scale, z)
+  cone1.castShadow = true
+  scene.add(cone1)
+
+  // Middle cone
+  const cone2Geometry = new THREE.ConeGeometry(0.5 * scale, 0.9 * scale, 8)
+  const cone2 = new THREE.Mesh(cone2Geometry, foliageMaterial)
+  cone2.position.set(x, 1.4 * scale, z)
+  cone2.castShadow = true
+  scene.add(cone2)
+
+  // Top cone
+  const cone3Geometry = new THREE.ConeGeometry(0.4 * scale, 0.8 * scale, 8)
+  const cone3 = new THREE.Mesh(cone3Geometry, foliageMaterial)
+  cone3.position.set(x, 1.9 * scale, z)
+  cone3.castShadow = true
+  scene.add(cone3)
+
+  // Star on top
+  const starGeometry = new THREE.SphereGeometry(0.1 * scale, 5, 5)
+  const starMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFD700, // Gold
+    emissive: 0xFFAA00,
+    emissiveIntensity: 0.5
+  })
+  const star = new THREE.Mesh(starGeometry, starMaterial)
+  star.position.set(x, 2.5 * scale, z)
+  scene.add(star)
+
+  // Snow on tree (white cones slightly larger)
+  const snowMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFFFFF
+  })
+
+  const snow1 = new THREE.Mesh(
+    new THREE.ConeGeometry(0.62 * scale, 0.3 * scale, 8),
+    snowMaterial
+  )
+  snow1.position.set(x, 1.3 * scale, z)
+  scene.add(snow1)
+
+  const snow2 = new THREE.Mesh(
+    new THREE.ConeGeometry(0.52 * scale, 0.25 * scale, 8),
+    snowMaterial
+  )
+  snow2.position.set(x, 1.85 * scale, z)
+  scene.add(snow2)
+
+  // Christmas lights (small colored spheres)
+  const lightColors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF]
+  for (let i = 0; i < 8; i++) {
+    const lightGeometry = new THREE.SphereGeometry(0.05 * scale, 4, 4)
+    const lightMaterial = new THREE.MeshLambertMaterial({
+      color: lightColors[i % lightColors.length],
+      emissive: lightColors[i % lightColors.length],
+      emissiveIntensity: 0.3
+    })
+    const light = new THREE.Mesh(lightGeometry, lightMaterial)
+    const angle = (i / 8) * Math.PI * 2
+    const radius = 0.4 * scale - (i * 0.05 * scale)
+    const height = 0.8 * scale + (i * 0.2 * scale)
+    light.position.set(
+      x + Math.cos(angle) * radius,
+      height,
+      z + Math.sin(angle) * radius
+    )
+    scene.add(light)
+  }
+}
+
+/**
  * Animation loop - renders the scene continuously
  */
 function animate() {
   animationId = requestAnimationFrame(animate)
+
+  // Update camera movement from keyboard
+  updateCameraMovement()
 
   // Update controls for smooth damping effect
   if (controls) {
@@ -447,6 +657,104 @@ function handleResize() {
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setPixelRatio(window.devicePixelRatio)
 }
+
+/**
+ * Handle keyboard key down events
+ */
+function handleKeyDown(event) {
+  const key = event.key.toLowerCase()
+
+  // Toggle help with H key
+  if (key === 'h') {
+    showHelp.value = !showHelp.value
+    return
+  }
+
+  // Reset camera with R key
+  if (key === 'r') {
+    resetCamera()
+    return
+  }
+
+  // Track movement keys
+  if (key in keys) {
+    keys[key] = true
+  }
+}
+
+/**
+ * Handle keyboard key up events
+ */
+function handleKeyUp(event) {
+  const key = event.key.toLowerCase()
+  if (key in keys) {
+    keys[key] = false
+  }
+}
+
+/**
+ * Update camera position based on keyboard input
+ */
+function updateCameraMovement() {
+  if (!camera || !controls) return
+
+  const speed = moveSpeed.value * 0.5
+
+  // Forward/Backward (W/S or Arrow Up/Down)
+  if (keys.w || keys.arrowup) {
+    camera.position.z -= speed
+    controls.target.z -= speed
+  }
+  if (keys.s || keys.arrowdown) {
+    camera.position.z += speed
+    controls.target.z += speed
+  }
+
+  // Left/Right (A/D or Arrow Left/Right)
+  if (keys.a || keys.arrowleft) {
+    camera.position.x -= speed
+    controls.target.x -= speed
+  }
+  if (keys.d || keys.arrowright) {
+    camera.position.x += speed
+    controls.target.x += speed
+  }
+
+  // Rotate Left/Right (Q/E)
+  if (keys.q) {
+    const angle = 0.02
+    const x = camera.position.x - controls.target.x
+    const z = camera.position.z - controls.target.z
+    camera.position.x = controls.target.x + (x * Math.cos(angle) - z * Math.sin(angle))
+    camera.position.z = controls.target.z + (x * Math.sin(angle) + z * Math.cos(angle))
+  }
+  if (keys.e) {
+    const angle = -0.02
+    const x = camera.position.x - controls.target.x
+    const z = camera.position.z - controls.target.z
+    camera.position.x = controls.target.x + (x * Math.cos(angle) - z * Math.sin(angle))
+    camera.position.z = controls.target.z + (x * Math.sin(angle) + z * Math.cos(angle))
+  }
+
+  // Update zoom level display
+  const distance = camera.position.distanceTo(controls.target)
+  currentZoom.value = distance
+}
+
+/**
+ * Reset camera to initial position
+ */
+function resetCamera() {
+  if (!camera || !controls) return
+
+  camera.position.set(
+    initialCameraPosition.x,
+    initialCameraPosition.y,
+    initialCameraPosition.z
+  )
+  controls.target.set(0, 0, 0)
+  controls.update()
+}
 </script>
 
 <style scoped>
@@ -454,5 +762,198 @@ function handleResize() {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+/* Help Overlay */
+.help-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.help-content {
+  background: linear-gradient(135deg, #0066B3 0%, #4682B4 100%);
+  padding: 2rem;
+  border-radius: 15px;
+  max-width: 500px;
+  color: white;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 3px solid #FFD700;
+}
+
+.help-content h2 {
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  font-size: 1.8rem;
+  color: #FFD700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.help-section {
+  margin-bottom: 1.5rem;
+}
+
+.help-section h3 {
+  color: #87CEEB;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.help-section p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.help-section strong {
+  color: #FFD700;
+}
+
+.close-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #FFD700;
+  color: #0066B3;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: #FFA500;
+  transform: scale(1.05);
+}
+
+/* Train Dashboard */
+.train-dashboard {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #8B3A3A 0%, #D2691E 100%);
+  padding: 1.5rem;
+  border-radius: 15px;
+  min-width: 250px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+  border: 3px solid #FFD700;
+  z-index: 100;
+}
+
+.dashboard-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #FFD700;
+  text-align: center;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.dashboard-controls {
+  color: white;
+}
+
+.control-group {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-group label {
+  font-weight: bold;
+  min-width: 80px;
+  color: #FFD700;
+}
+
+.control-group input[type="range"] {
+  flex: 1;
+  cursor: pointer;
+}
+
+.control-group span {
+  min-width: 40px;
+  text-align: right;
+  font-weight: bold;
+  color: white;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.control-buttons button {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-reset {
+  background: #228B22;
+  color: white;
+}
+
+.btn-reset:hover {
+  background: #32CD32;
+  transform: scale(1.05);
+}
+
+.btn-help {
+  background: #FFD700;
+  color: #0066B3;
+}
+
+.btn-help:hover {
+  background: #FFA500;
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .train-dashboard {
+    top: 10px;
+    right: 10px;
+    min-width: 200px;
+    padding: 1rem;
+  }
+
+  .dashboard-title {
+    font-size: 1.1rem;
+  }
+
+  .help-content {
+    max-width: 90%;
+    padding: 1.5rem;
+  }
+
+  .help-content h2 {
+    font-size: 1.4rem;
+  }
 }
 </style>
