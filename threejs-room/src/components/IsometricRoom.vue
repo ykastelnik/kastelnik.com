@@ -288,6 +288,131 @@ function createRoom() {
     windowX + windowWidth / 2 + frameThickness / 2 // Right edge of window
   )
   scene.add(rightFrame)
+
+  // --- COFFEE TABLE WITH FLOWER POT ---
+  // Position in the corner formed by the two walls
+  createCoffeeTableWithFlower()
+}
+
+/**
+ * Create a coffee table with a flower pot in the corner
+ */
+function createCoffeeTableWithFlower() {
+  const cornerX = -ROOM_SIZE / 2 + 1.5 // Near the red brick wall
+  const cornerZ = -ROOM_SIZE / 2 + 1.5 // Near the blue wall
+
+  // --- COFFEE TABLE ---
+  // Table top
+  const tableTopGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.8)
+  const tableTopMaterial = new THREE.MeshLambertMaterial({
+    color: 0x8B4513 // Brown wood color
+  })
+  const tableTop = new THREE.Mesh(tableTopGeometry, tableTopMaterial)
+  tableTop.position.set(cornerX, 0.5, cornerZ) // Table height: 0.5 units
+  tableTop.castShadow = true
+  tableTop.receiveShadow = true
+  scene.add(tableTop)
+
+  // Table legs (4 legs at corners)
+  const legGeometry = new THREE.BoxGeometry(0.08, 0.5, 0.08)
+  const legMaterial = new THREE.MeshLambertMaterial({
+    color: 0x654321 // Darker brown for legs
+  })
+
+  const legPositions = [
+    [-0.5, -0.35], // Front left
+    [0.5, -0.35],  // Front right
+    [-0.5, 0.35],  // Back left
+    [0.5, 0.35]    // Back right
+  ]
+
+  legPositions.forEach(([offsetX, offsetZ]) => {
+    const leg = new THREE.Mesh(legGeometry, legMaterial)
+    leg.position.set(
+      cornerX + offsetX,
+      0.25, // Half the leg height
+      cornerZ + offsetZ
+    )
+    leg.castShadow = true
+    scene.add(leg)
+  })
+
+  // --- FLOWER POT ---
+  // Pot body (cylinder tapering slightly)
+  const potGeometry = new THREE.CylinderGeometry(0.15, 0.12, 0.25, 16)
+  const potMaterial = new THREE.MeshLambertMaterial({
+    color: 0xD2691E // Terracotta color
+  })
+  const pot = new THREE.Mesh(potGeometry, potMaterial)
+  pot.position.set(cornerX, 0.675, cornerZ) // On top of table (0.5 + 0.05 + 0.125)
+  pot.castShadow = true
+  pot.receiveShadow = true
+  scene.add(pot)
+
+  // Soil in pot
+  const soilGeometry = new THREE.CylinderGeometry(0.14, 0.14, 0.05, 16)
+  const soilMaterial = new THREE.MeshLambertMaterial({
+    color: 0x3E2723 // Dark brown soil
+  })
+  const soil = new THREE.Mesh(soilGeometry, soilMaterial)
+  soil.position.set(cornerX, 0.775, cornerZ) // Top of pot
+  scene.add(soil)
+
+  // --- FLOWER/PLANT ---
+  // Stem
+  const stemGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8)
+  const stemMaterial = new THREE.MeshLambertMaterial({
+    color: 0x228B22 // Forest green
+  })
+  const stem = new THREE.Mesh(stemGeometry, stemMaterial)
+  stem.position.set(cornerX, 1.0, cornerZ) // Growing from soil
+  scene.add(stem)
+
+  // Flower petals (5 petals arranged in a circle)
+  const petalGeometry = new THREE.SphereGeometry(0.08, 8, 8)
+  const petalMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFF69B4 // Hot pink
+  })
+
+  const petalCount = 5
+  const petalRadius = 0.1
+
+  for (let i = 0; i < petalCount; i++) {
+    const angle = (i / petalCount) * Math.PI * 2
+    const petal = new THREE.Mesh(petalGeometry, petalMaterial)
+    petal.position.set(
+      cornerX + Math.cos(angle) * petalRadius,
+      1.2,
+      cornerZ + Math.sin(angle) * petalRadius
+    )
+    petal.scale.set(0.8, 0.5, 0.8) // Flatten petals
+    scene.add(petal)
+  }
+
+  // Flower center
+  const centerGeometry = new THREE.SphereGeometry(0.06, 8, 8)
+  const centerMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFFF00 // Yellow center
+  })
+  const center = new THREE.Mesh(centerGeometry, centerMaterial)
+  center.position.set(cornerX, 1.2, cornerZ)
+  scene.add(center)
+
+  // Leaves (2 simple leaves on the stem)
+  const leafGeometry = new THREE.SphereGeometry(0.1, 8, 8)
+  const leafMaterial = new THREE.MeshLambertMaterial({
+    color: 0x32CD32 // Lime green
+  })
+
+  const leaf1 = new THREE.Mesh(leafGeometry, leafMaterial)
+  leaf1.position.set(cornerX - 0.12, 0.9, cornerZ)
+  leaf1.scale.set(1.5, 0.3, 0.5)
+  scene.add(leaf1)
+
+  const leaf2 = new THREE.Mesh(leafGeometry, leafMaterial)
+  leaf2.position.set(cornerX + 0.12, 1.0, cornerZ)
+  leaf2.scale.set(1.5, 0.3, 0.5)
+  scene.add(leaf2)
 }
 
 /**
