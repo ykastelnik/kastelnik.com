@@ -34,12 +34,28 @@
           <label>Zoom Level:</label>
           <span>{{ currentZoom.toFixed(1) }}</span>
         </div>
+        <div class="control-group">
+          <label>Music:</label>
+          <button @click="toggleMusic" class="btn-music">
+            {{ isMusicPlaying ? '🔊 Pause' : '🔇 Play' }}
+          </button>
+        </div>
+        <div class="control-group">
+          <label>Volume:</label>
+          <input type="range" v-model="musicVolume" min="0" max="100" step="1" @input="updateVolume" />
+          <span>{{ musicVolume }}%</span>
+        </div>
         <div class="control-buttons">
           <button @click="resetCamera" class="btn-reset">🔄 Reset View</button>
           <button @click="showHelp = !showHelp" class="btn-help">❓ Help</button>
         </div>
       </div>
     </div>
+
+    <!-- Audio Elements -->
+    <audio ref="christmasMusic" loop>
+      <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
   </div>
 </template>
 
@@ -50,11 +66,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 // Template ref for the container element
 const containerRef = ref(null)
+const christmasMusic = ref(null)
 
 // UI reactive variables
 const showHelp = ref(true) // Show help on start
 const moveSpeed = ref(0.5)
 const currentZoom = ref(15)
+const isMusicPlaying = ref(false)
+const musicVolume = ref(50)
 
 // Three.js core objects
 let scene, camera, renderer, controls, animationId
@@ -63,6 +82,9 @@ let scene, camera, renderer, controls, animationId
 let snowflakes = []
 let train = null
 let trainPosition = -ROOM_SIZE / 2 // Start position off-screen
+let smokeParticles = []
+let audioContext = null
+let hasPlayedBell = false
 
 // Room dimensions
 const ROOM_SIZE = 10
@@ -83,6 +105,14 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
+
+  // Initialize audio context
+  audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+  // Set initial volume
+  if (christmasMusic.value) {
+    christmasMusic.value.volume = musicVolume.value / 100
+  }
 })
 
 onUnmounted(() => {
@@ -98,6 +128,13 @@ onUnmounted(() => {
   }
   if (renderer) {
     renderer.dispose()
+  }
+  // Stop music and close audio context
+  if (christmasMusic.value) {
+    christmasMusic.value.pause()
+  }
+  if (audioContext) {
+    audioContext.close()
   }
 })
 
@@ -776,8 +813,36 @@ function createThomasTrain() {
 
   // Position train at starting point on the tracks
   train.position.set(0, 0, trainPosition)
-  train.scale.set(0.8, 0.8, 0.8) // Scale down a bit to fit on tracks
+  train.scale.set(1.3, 1.3, 1.3) // Scale up for better visibility
+  train.rotation.y = Math.PI / 2 // Rotate 90° to align with Z-axis tracks
   scene.add(train)
+
+  // Create smoke particles for the chimney
+  createSmokeParticles()
+}
+
+/**
+ * Create smoke particles for the train chimney
+ */
+function createSmokeParticles() {
+  // Create 15 smoke particles
+  for (let i = 0; i < 15; i++) {
+    const smokeGeometry = new THREE.SphereGeometry(0.08, 8, 8)
+    const smokeMaterial = new THREE.MeshLambertMaterial({
+      color: 0xAAAAAA, // Light gray smoke
+      transparent: true,
+      opacity: 0.6
+    })
+    const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial)
+
+    // Store animation properties
+    smoke.userData.lifetime = Math.random() * 2 // Random start offset
+    smoke.userData.maxLifetime = 2 // 2 seconds lifetime
+    smoke.userData.initialScale = 1.0
+
+    smokeParticles.push(smoke)
+    scene.add(smoke)
+  }
 }
 
 /**
@@ -820,6 +885,47 @@ function animateSnowAndTrain() {
       if (child.geometry && child.geometry.type === 'CylinderGeometry' &&
           child.material.color.getHex() === 0x333333) {
         child.rotation.x += 0.1
+      }
+    })
+  }
+
+  // Animate smoke particles
+  if (train) {
+    smokeParticles.forEach((smoke, index) => {
+      // Update lifetime
+      smoke.userData.lifetime += 0.016 // ~60fps
+
+      if (smoke.userData.lifetime >= smoke.userData.maxLifetime) {
+        // Reset particle to chimney position
+        smoke.userData.lifetime = 0
+
+        // Funnel is at relative position (0.3, 1.12, 0) in train group
+        // After rotation of train by 90°, we need to adjust coordinates
+        // Original funnel: x=0.3, y=1.12, z=0
+        // After 90° Y rotation: new x=0, new y=1.12, new z=-0.3
+        const funnelOffset = new THREE.Vector3(0, 1.12, -0.3)
+        funnelOffset.applyMatrix4(train.matrix)
+
+        smoke.position.copy(train.position).add(funnelOffset)
+        smoke.scale.set(1, 1, 1)
+        smoke.material.opacity = 0.6
+      } else {
+        // Rise up and expand
+        const progress = smoke.userData.lifetime / smoke.userData.maxLifetime
+
+        // Move upward
+        smoke.position.y += 0.015
+
+        // Slight drift (sway)
+        smoke.position.x += Math.sin(Date.now() * 0.002 + index) * 0.005
+        smoke.position.z += Math.cos(Date.now() * 0.002 + index) * 0.005
+
+        // Expand as it rises
+        const scale = 1 + progress * 2
+        smoke.scale.set(scale, scale, scale)
+
+        // Fade out
+        smoke.material.opacity = 0.6 * (1 - progress)
       }
     })
   }
@@ -960,6 +1066,92 @@ function resetCamera() {
   )
   controls.target.set(0, 0, 0)
   controls.update()
+}
+
+/**
+ * Toggle Christmas music play/pause
+ */
+function toggleMusic() {
+  if (!christmasMusic.value) return
+
+  if (isMusicPlaying.value) {
+    christmasMusic.value.pause()
+    isMusicPlaying.value = false
+  } else {
+    christmasMusic.value.play().catch(err => {
+      console.log('Audio play error:', err)
+    })
+    isMusicPlaying.value = true
+  }
+}
+
+/**
+ * Update music volume
+ */
+function updateVolume() {
+  if (christmasMusic.value) {
+    christmasMusic.value.volume = musicVolume.value / 100
+  }
+}
+
+/**
+ * Play jingle bell sound using Web Audio API
+ */
+function playJingleBell() {
+  if (!audioContext) return
+
+  // Create oscillators for a bell-like sound
+  const now = audioContext.currentTime
+
+  // Bell sound using multiple frequencies
+  const frequencies = [800, 1000, 1200] // C major chord frequencies
+
+  frequencies.forEach((freq, index) => {
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    oscillator.frequency.value = freq
+    oscillator.type = 'sine'
+
+    // Envelope for bell sound (quick attack, long decay)
+    gainNode.gain.setValueAtTime(0, now)
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01) // Attack
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5) // Decay
+
+    oscillator.start(now + index * 0.05) // Slight delay between notes
+    oscillator.stop(now + 0.6)
+  })
+}
+
+/**
+ * Play train whistle sound
+ */
+function playTrainWhistle() {
+  if (!audioContext) return
+
+  const now = audioContext.currentTime
+
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+
+  // Train whistle is typically around 500-700 Hz
+  oscillator.frequency.setValueAtTime(650, now)
+  oscillator.frequency.linearRampToValueAtTime(550, now + 0.5)
+  oscillator.type = 'sine'
+
+  gainNode.gain.setValueAtTime(0, now)
+  gainNode.gain.linearRampToValueAtTime(0.4, now + 0.1)
+  gainNode.gain.linearRampToValueAtTime(0.4, now + 0.4)
+  gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8)
+
+  oscillator.start(now)
+  oscillator.stop(now + 0.8)
 }
 </script>
 
