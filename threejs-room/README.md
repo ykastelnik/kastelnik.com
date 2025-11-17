@@ -1,16 +1,19 @@
-# Three.js Isometric Room - Vue 3 Project
+# Three.js Isometric Room - Vue 3 Project (Thomas the Train Edition)
 
-A complete Vue 3 + Three.js project showcasing an isometric view of a cozy cubic room with vibrant colors and a window.
+A complete Vue 3 + Three.js project showcasing Thomas the Train's railway shed with an isometric view, procedural brick textures, and railway tracks.
 
 ## Features
 
 - **Vue 3 Composition API**: Modern Vue.js framework with script setup syntax
 - **Three.js Integration**: WebGL-based 3D rendering
 - **Isometric Perspective**: OrthographicCamera positioned at (10, 10, 10)
-- **Cozy Room Design**:
-  - Soft orange floor (#FFA07A)
-  - Deep blue back wall (#4682B4)
-  - Sunny yellow left wall (#FFD700) with a window cutout
+- **Interactive Controls**: OrbitControls for camera movement (rotate, pan, zoom)
+- **Thomas the Train Railway Shed Theme**:
+  - Railway gray concrete floor (#808080)
+  - Thomas blue brick wall (#0066B3) with procedural texture
+  - Red brick wall (#8B3A3A) with procedural texture
+  - Functional railway tracks with rails and sleepers (ties)
+- **Procedural Textures**: Canvas-based brick texture generator
 - **Window**: Rectangular cutout with decorative brown frame
 - **Lighting**: Ambient light (0.5 intensity) + Directional light (1.0 intensity) with soft shadows
 - **Responsive**: Handles window resizing automatically
@@ -71,11 +74,29 @@ npm run preview
 - **Looking at**: Scene center (0, 0, 0)
 - **Frustum size**: 15 units (adjustable for zoom)
 
-### Room Dimensions
+### Interactive Controls
+- **OrbitControls**: Mouse/touch-based camera manipulation
+- **Left-click drag**: Rotate camera around the scene
+- **Right-click drag**: Pan the view
+- **Scroll wheel**: Zoom in/out (min: 5 units, max: 50 units)
+- **Damping**: Smooth camera movements enabled (factor: 0.05)
+- **Max polar angle**: π/2 (prevents camera going below ground)
+
+### Railway Shed Design
 - **Size**: 10 x 10 x 10 units
-- **Floor**: Horizontal plane at y=0
-- **Back Wall**: Vertical plane at z=-5
-- **Left Wall**: Vertical plane at x=-5 with window cutout
+- **Floor**: Railway gray concrete (#808080) with railroad tracks
+- **Back Wall**: Thomas blue brick (#0066B3) with procedural texture
+- **Left Wall**: Red brick (#8B3A3A) with procedural texture and window cutout
+- **Railway Tracks**:
+  - Two parallel rails (dark gray, 0.15 × 0.1 × 10 units)
+  - Wooden sleepers (brown, spaced 0.8 units apart)
+
+### Procedural Brick Texture
+- **Canvas size**: 512 × 512 pixels
+- **Brick dimensions**: 100 × 40 pixels
+- **Mortar width**: 4 pixels
+- **Pattern**: Offset brick layout for realistic appearance
+- **Wrapping**: Repeating texture (2× repeat on both axes)
 
 ### Window Specifications
 - **Dimensions**: 3 units wide × 4 units tall
@@ -90,18 +111,21 @@ npm run preview
 
 ### Materials
 - **Type**: MeshLambertMaterial (for subtle shading)
-- **Colors**: Vibrant and warm (orange, blue, yellow)
+- **Textures**: Procedural brick textures using HTML5 Canvas
+- **Railway elements**: Solid colors (gray rails, brown sleepers)
 - **Sides**: DoubleSide rendering for visibility
 
 ## Customization
 
 You can easily customize the room by modifying `src/components/IsometricRoom.vue`:
 
-- **Colors**: Change the hex values in the material definitions
+- **Brick Colors**: Change colors in `createBrickTexture()` calls
 - **Room Size**: Adjust the `ROOM_SIZE` constant
 - **Camera Position**: Modify `camera.position.set(x, y, z)`
 - **Window Size/Position**: Update `windowWidth`, `windowHeight`, `windowX`, `windowY`
 - **Lighting**: Adjust light intensities and positions
+- **Railway Tracks**: Modify track spacing, rail size, or sleeper density
+- **Controls**: Adjust `minDistance`, `maxDistance`, `dampingFactor` in OrbitControls setup
 
 ## Technologies Used
 
@@ -123,4 +147,4 @@ MIT
 
 ## Credits
 
-Created as a demonstration of Three.js integration with Vue 3, featuring an isometric room design with warm, cozy aesthetics.
+Created as a demonstration of Three.js integration with Vue 3, featuring Thomas the Train's railway shed with procedural textures, interactive controls, and authentic railway elements. Inspired by the beloved children's series "Thomas the Tank Engine & Friends."
