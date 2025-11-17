@@ -241,42 +241,51 @@ function createRoom() {
     side: THREE.DoubleSide
   })
   const frameThickness = 0.15
+  const frameDepth = 0.1 // Depth perpendicular to wall
 
-  // Top frame bar
-  const topFrameGeometry = new THREE.BoxGeometry(windowWidth + frameThickness * 2, frameThickness, 0.1)
+  // Top frame bar (horizontal, extends in Z direction)
+  const topFrameGeometry = new THREE.BoxGeometry(
+    frameDepth,
+    frameThickness,
+    windowWidth + frameThickness * 2
+  )
   const topFrame = new THREE.Mesh(topFrameGeometry, frameMaterial)
   topFrame.position.set(
-    -ROOM_SIZE / 2 - 0.05,
-    windowY + windowHeight / 2,
-    windowX
+    -ROOM_SIZE / 2 - frameDepth / 2, // Slightly in front of wall
+    windowY + windowHeight / 2 + frameThickness / 2, // Top edge of window
+    windowX // Center of window in Z
   )
   scene.add(topFrame)
 
-  // Bottom frame bar
+  // Bottom frame bar (horizontal, extends in Z direction)
   const bottomFrame = new THREE.Mesh(topFrameGeometry, frameMaterial)
   bottomFrame.position.set(
-    -ROOM_SIZE / 2 - 0.05,
-    windowY - windowHeight / 2,
+    -ROOM_SIZE / 2 - frameDepth / 2,
+    windowY - windowHeight / 2 - frameThickness / 2, // Bottom edge of window
     windowX
   )
   scene.add(bottomFrame)
 
-  // Left frame bar
-  const sideFrameGeometry = new THREE.BoxGeometry(frameThickness, windowHeight, 0.1)
+  // Left frame bar (vertical, extends in Y direction)
+  const sideFrameGeometry = new THREE.BoxGeometry(
+    frameDepth,
+    windowHeight + frameThickness * 2,
+    frameThickness
+  )
   const leftFrame = new THREE.Mesh(sideFrameGeometry, frameMaterial)
   leftFrame.position.set(
-    -ROOM_SIZE / 2 - 0.05,
-    windowY,
-    windowX - windowWidth / 2
+    -ROOM_SIZE / 2 - frameDepth / 2,
+    windowY, // Center of window in Y
+    windowX - windowWidth / 2 - frameThickness / 2 // Left edge of window
   )
   scene.add(leftFrame)
 
-  // Right frame bar
+  // Right frame bar (vertical, extends in Y direction)
   const rightFrame = new THREE.Mesh(sideFrameGeometry, frameMaterial)
   rightFrame.position.set(
-    -ROOM_SIZE / 2 - 0.05,
+    -ROOM_SIZE / 2 - frameDepth / 2,
     windowY,
-    windowX + windowWidth / 2
+    windowX + windowWidth / 2 + frameThickness / 2 // Right edge of window
   )
   scene.add(rightFrame)
 }
