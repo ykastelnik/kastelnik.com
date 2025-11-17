@@ -41,9 +41,9 @@ onUnmounted(() => {
  */
 function initScene() {
   // === SCENE SETUP ===
-  // Create the scene with a sky blue background (visible through the window)
+  // Create the scene with a bright sky background (visible through the window)
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x87CEEB) // Sky blue
+  scene.background = new THREE.Color(0x87CEEB) // Bright sky blue (Thomas the Train countryside)
 
   // === CAMERA SETUP ===
   // Use OrthographicCamera for isometric view
@@ -107,14 +107,47 @@ function initScene() {
 }
 
 /**
- * Create the room: floor and two adjacent walls with a window
+ * Create procedural brick texture for Thomas the Train's shed
+ */
+function createBrickTexture(brickColor, mortarColor) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+
+  // Fill with mortar color
+  ctx.fillStyle = mortarColor
+  ctx.fillRect(0, 0, 512, 512)
+
+  // Draw bricks
+  ctx.fillStyle = brickColor
+  const brickWidth = 100
+  const brickHeight = 40
+  const mortarWidth = 4
+
+  for (let y = 0; y < 512; y += brickHeight + mortarWidth) {
+    for (let x = 0; x < 512; x += brickWidth + mortarWidth) {
+      const offset = (Math.floor(y / (brickHeight + mortarWidth)) % 2) * (brickWidth / 2)
+      ctx.fillRect(x + offset, y, brickWidth, brickHeight)
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(2, 2)
+  return texture
+}
+
+/**
+ * Create the room: floor and two adjacent walls with a window (Thomas the Train shed theme)
  */
 function createRoom() {
   // --- FLOOR ---
-  // Soft orange floor (#FFA07A)
+  // Concrete floor with railway gray color
   const floorGeometry = new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE)
   const floorMaterial = new THREE.MeshLambertMaterial({
-    color: 0xFFA07A,
+    color: 0x808080, // Railway gray
     side: THREE.DoubleSide
   })
   const floor = new THREE.Mesh(floorGeometry, floorMaterial)
@@ -123,11 +156,35 @@ function createRoom() {
   floor.receiveShadow = true
   scene.add(floor)
 
-  // --- WALL 1 (Deep Blue) ---
-  // Position: back wall (along Z-axis)
+  // --- RAILWAY TRACKS ---
+  // Add railway tracks on the floor for Thomas the Train theme
+  const railMaterial = new THREE.MeshLambertMaterial({ color: 0x4A4A4A }) // Dark gray rails
+  const sleeperlMaterial = new THREE.MeshLambertMaterial({ color: 0x5C4033 }) // Brown sleepers (ties)
+
+  // Rails (two parallel rails)
+  const railGeometry = new THREE.BoxGeometry(0.15, 0.1, ROOM_SIZE)
+  const rail1 = new THREE.Mesh(railGeometry, railMaterial)
+  rail1.position.set(-0.7, 0.05, 0)
+  scene.add(rail1)
+
+  const rail2 = new THREE.Mesh(railGeometry, railMaterial)
+  rail2.position.set(0.7, 0.05, 0)
+  scene.add(rail2)
+
+  // Sleepers (cross ties)
+  const sleeperGeometry = new THREE.BoxGeometry(2, 0.08, 0.2)
+  for (let i = -ROOM_SIZE / 2; i < ROOM_SIZE / 2; i += 0.8) {
+    const sleeper = new THREE.Mesh(sleeperGeometry, sleeperlMaterial)
+    sleeper.position.set(0, 0.04, i)
+    scene.add(sleeper)
+  }
+
+  // --- WALL 1 (Thomas Blue Brick Wall) ---
+  // Position: back wall (along Z-axis) - Thomas the Tank Engine blue
   const wall1Geometry = new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE)
+  const thomasBlueBrickTexture = createBrickTexture('#0066B3', '#C0C0C0') // Thomas blue with gray mortar
   const wall1Material = new THREE.MeshLambertMaterial({
-    color: 0x4682B4, // Deep blue
+    map: thomasBlueBrickTexture,
     side: THREE.DoubleSide
   })
   const wall1 = new THREE.Mesh(wall1Geometry, wall1Material)
@@ -136,8 +193,8 @@ function createRoom() {
   wall1.castShadow = true
   scene.add(wall1)
 
-  // --- WALL 2 (Sunny Yellow) with Window ---
-  // Position: left wall (along X-axis)
+  // --- WALL 2 (Red Brick Wall) with Window ---
+  // Position: left wall (along X-axis) - Classic railway shed red brick
   // We'll create this wall using Shape geometry to cut out a window
   const wallShape = new THREE.Shape()
 
@@ -165,8 +222,9 @@ function createRoom() {
 
   // Create geometry from the shape
   const wall2Geometry = new THREE.ShapeGeometry(wallShape)
+  const redBrickTexture = createBrickTexture('#8B3A3A', '#D3D3D3') // Railway red brick with light gray mortar
   const wall2Material = new THREE.MeshLambertMaterial({
-    color: 0xFFD700, // Sunny yellow
+    map: redBrickTexture,
     side: THREE.DoubleSide
   })
   const wall2 = new THREE.Mesh(wall2Geometry, wall2Material)
