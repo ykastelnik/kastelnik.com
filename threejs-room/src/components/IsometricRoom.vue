@@ -5,12 +5,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 // Template ref for the container element
 const containerRef = ref(null)
 
 // Three.js core objects
-let scene, camera, renderer, animationId
+let scene, camera, renderer, controls, animationId
 
 // Room dimensions
 const ROOM_SIZE = 10
@@ -26,6 +27,9 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   if (animationId) {
     cancelAnimationFrame(animationId)
+  }
+  if (controls) {
+    controls.dispose()
   }
   if (renderer) {
     renderer.dispose()
@@ -67,6 +71,16 @@ function initScene() {
   renderer.shadowMap.enabled = true // Enable shadows
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   containerRef.value.appendChild(renderer.domElement)
+
+  // === ORBIT CONTROLS ===
+  // Enable interactive camera movement (rotate, pan, zoom)
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true // Smooth camera movements
+  controls.dampingFactor = 0.05
+  controls.screenSpacePanning = false
+  controls.minDistance = 5 // Minimum zoom distance
+  controls.maxDistance = 50 // Maximum zoom distance
+  controls.maxPolarAngle = Math.PI / 2 // Prevent camera going below ground
 
   // === LIGHTING ===
   // Ambient light for overall illumination
@@ -214,6 +228,12 @@ function createRoom() {
  */
 function animate() {
   animationId = requestAnimationFrame(animate)
+
+  // Update controls for smooth damping effect
+  if (controls) {
+    controls.update()
+  }
+
   renderer.render(scene, camera)
 }
 
